@@ -25,7 +25,7 @@ func visit(path string, f os.FileInfo, err error) error {
 	return err
 }
 
-func startWalk(root string) error {
+func find(root string) error {
 
 	defer wg.Done()
 	var o bytes.Buffer
@@ -61,7 +61,7 @@ func main() {
 	for  dir := range basedirs {
 		if basedirs[dir].IsDir() {
 			wg.Add(1)
-			go startWalk(filepath.Join(root, basedirs[dir].Name()))
+			go find(filepath.Join(root, basedirs[dir].Name()))
 		}
 	}
 
