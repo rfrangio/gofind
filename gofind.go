@@ -17,9 +17,7 @@ func find(root string, wg *sync.WaitGroup, exp []string) error {
 	defer wg.Done()
 	var cmd_out bytes.Buffer
 
-	findargs := make([]string, 1)
-	findargs[0] = root 
-	findargs = append(findargs, exp... )
+	findargs := append([]string{root}, exp... )
 	cmd := exec.Command("find", findargs... )
 	cmd.Stdout = &cmd_out
 	err := cmd.Run()
