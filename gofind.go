@@ -3,7 +3,7 @@ package main
 
 import (
 	"path/filepath"
-	"os"
+//	"os"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -12,20 +12,7 @@ import (
 	"bytes"
 )
 
-var wg sync.WaitGroup
-var exp string
-
-func visit(path string, f os.FileInfo, err error) error {
-
-	b, err := filepath.Match(exp, f.Name())
-	if b == true {
-		fmt.Printf("%s\n", path)
-	}
-
-	return err
-}
-
-func find(root string) error {
+func find(root string, wg *sync.WaitGroup, exp string) error {
 
 	defer wg.Done()
 	var o bytes.Buffer
@@ -40,13 +27,14 @@ func find(root string) error {
 	if(cmd_out.Len() > 0) {
 		fmt.Printf("%s\n", cmd_out.String())
 	}
-	// SLOWWWWW
-	// err := filepath.Walk(root, visit)
 
 	return err
 }
 
 func main() {
+
+	var wg sync.WaitGroup
+	var exp string
 
 	flag.Parse()
 	root := flag.Arg(0)
@@ -61,7 +49,7 @@ func main() {
 	for  dir := range basedirs {
 		if basedirs[dir].IsDir() {
 			wg.Add(1)
-			go find(filepath.Join(root, basedirs[dir].Name()))
+			go find(filepath.Join(root, basedirs[dir].Name()), &wg, exp)
 		}
 	}
 
