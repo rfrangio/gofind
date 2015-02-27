@@ -27,6 +27,7 @@ func visit(path string, f os.FileInfo, err error) error {
 
 func startWalk(root string) error {
 
+	defer wg.Done()
 	var o bytes.Buffer
 
 	cmd_out := &o
@@ -42,7 +43,6 @@ func startWalk(root string) error {
 	// SLOWWWWW
 	// err := filepath.Walk(root, visit)
 
-	defer wg.Done()
 	return err
 }
 
