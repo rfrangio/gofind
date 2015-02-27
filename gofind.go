@@ -46,7 +46,6 @@ func main() {
 
 	for  dir := range basedirs {
 		if basedirs[dir].IsDir() {
-			fmt.Printf("dir: %v \n", basedirs[dir])
 			wg.Add(1)
 			go find(filepath.Join(root, basedirs[dir].Name()), &wg, argslice[1:])
 		}
