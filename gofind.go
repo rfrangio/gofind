@@ -25,7 +25,7 @@ func find(root string, wg *sync.WaitGroup, exp []string) error {
 	err := cmd.Run()
 
 	if(cmd_out.Len() > 0) {
-		fmt.Printf("%s\n", cmd_out.String())
+		fmt.Printf("%s", cmd_out.String())
 	}
 	return err
 }
@@ -37,6 +37,7 @@ func main() {
 	flag.Parse()
 	root := flag.Arg(0)
 	basedirs, direrr := ioutil.ReadDir(root)
+	var shallowfind []string
 
 	argslice := flag.Args() 
  
@@ -45,6 +46,11 @@ func main() {
 		fmt.Printf("Usage: gofind rootsearchdir <other-find-args> \n")
 		return
 	}
+
+	shallowfind = append(shallowfind, argslice[1:]... )
+	shallowfind = append(shallowfind, []string{"-maxdepth", "1"}... )
+	wg.Add(1)
+	go find(root, &wg, shallowfind) 
 
 	for  dir := range basedirs {
 		if basedirs[dir].IsDir() {
