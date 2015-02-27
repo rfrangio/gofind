@@ -15,19 +15,15 @@ import (
 func find(root string, wg *sync.WaitGroup, exp string) error {
 
 	defer wg.Done()
-	var o bytes.Buffer
-
-	cmd_out := &o
+	var cmd_out bytes.Buffer
 
 	cmd := exec.Command("find", root, "-name", exp, "-print")
-	cmd.Stdout = cmd_out
-
+	cmd.Stdout = &cmd_out
 	err := cmd.Run()
 
 	if(cmd_out.Len() > 0) {
 		fmt.Printf("%s\n", cmd_out.String())
 	}
-
 	return err
 }
 
@@ -39,7 +35,6 @@ func main() {
 	flag.Parse()
 	root := flag.Arg(0)
 	exp = flag.Arg(1)
-
 	basedirs, direrr := ioutil.ReadDir(root)
 
 	if(direrr != nil) {
