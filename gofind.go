@@ -12,12 +12,15 @@ import (
 	"bytes"
 )
 
-func find(root string, wg *sync.WaitGroup, exp string) error {
+func find(root string, wg *sync.WaitGroup, exp []string) error {
 
 	defer wg.Done()
 	var cmd_out bytes.Buffer
 
-	cmd := exec.Command("find", root, "-name", exp, "-print")
+	findargs := make([]string, 1)
+	findargs[0] = root 
+	findargs = append(findargs, exp... )
+	cmd := exec.Command("find", findargs... )
 	cmd.Stdout = &cmd_out
 	err := cmd.Run()
 
@@ -30,21 +33,22 @@ func find(root string, wg *sync.WaitGroup, exp string) error {
 func main() {
 
 	var wg sync.WaitGroup
-	var exp string
 
 	flag.Parse()
 	root := flag.Arg(0)
-	exp = flag.Arg(1)
 	basedirs, direrr := ioutil.ReadDir(root)
 
+	argslice := flag.Args() 
+ 
 	if(direrr != nil) {
 		fmt.Printf("ReadDir err %v \n", direrr)
 	}
 
 	for  dir := range basedirs {
 		if basedirs[dir].IsDir() {
+			fmt.Printf("dir: %v \n", basedirs[dir])
 			wg.Add(1)
-			go find(filepath.Join(root, basedirs[dir].Name()), &wg, exp)
+			go find(filepath.Join(root, basedirs[dir].Name()), &wg, argslice[1:])
 		}
 	}
 
