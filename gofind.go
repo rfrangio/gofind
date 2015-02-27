@@ -37,7 +37,6 @@ func main() {
 	flag.Parse()
 	root := flag.Arg(0)
 	basedirs, direrr := ioutil.ReadDir(root)
-	var shallowfind []string
 
 	argslice := flag.Args() 
  
@@ -47,8 +46,7 @@ func main() {
 		return
 	}
 
-	shallowfind = append(shallowfind, argslice[1:]... )
-	shallowfind = append(shallowfind, []string{"-maxdepth", "1"}... )
+	shallowfind := append(append([]string{},[]string{"-maxdepth", "1"}... ), argslice[1:]... )
 	wg.Add(1)
 	go find(root, &wg, shallowfind) 
 
