@@ -42,6 +42,8 @@ func main() {
  
 	if(direrr != nil) {
 		fmt.Printf("ReadDir err %v \n", direrr)
+		fmt.Printf("Usage: gofind rootsearchdir <other-find-args> \n")
+		return
 	}
 
 	for  dir := range basedirs {
