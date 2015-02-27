@@ -1,2 +1,2 @@
 # gofind
-go utility for running concurrent finds
+go utility for speeding up large finds 
