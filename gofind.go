@@ -10,6 +10,7 @@ import (
 	"sync"
 	"os/exec"
 	"bytes"
+	"strconv"
 )
 
 type msg_type int
@@ -25,14 +26,14 @@ type output_msg struct {
 	buffer	bytes.Buffer
 }
 
-func find(root string, wg *sync.WaitGroup, exp []string, output chan output_msg) {
+func find(root string, wg *sync.WaitGroup, flags []string, args []string, output chan output_msg) {
 
 	defer wg.Done()
 	var cmd_out, cmd_err bytes.Buffer
 	var msg output_msg 
 
-	findargs := append([]string{root}, exp... )
-	cmd := exec.Command("find", findargs... )
+	findstr := append(append(append([]string{}, flags... ), []string{root}... ), args... )
+	cmd := exec.Command("find", findstr... )
 	cmd.Stdout = &cmd_out
 	cmd.Stderr = &cmd_err
 	err := cmd.Run()
@@ -74,15 +75,38 @@ func aggregator(wg *sync.WaitGroup, input chan output_msg) {
 
 }
 
+func parseflags() []string {
+
+	osx_find_flags := []string{"L", "H", "P", "E", "X", "d", "s", "x"}
+	set_flags := []string{}
+
+	for f := range osx_find_flags {
+		flag.Bool(osx_find_flags[f], false, "bool")
+	}
+
+	flag.Parse()
+	for f := range osx_find_flags {
+		flag_p := flag.Lookup(osx_find_flags[f])
+		val, err := strconv.ParseBool(flag_p.Value.String())
+		if err == nil && val == true {
+			set_flags = append(set_flags, "-"+flag_p.Name)
+		}
+	}
+
+	return set_flags
+}
+
 func main() {
 
 	var wg, wga sync.WaitGroup
 	msg_channel := make(chan output_msg)
 
-	flag.Parse()
-	root := flag.Arg(0)
+	set_flags := parseflags()
+
+	argslice := flag.Args()
+	fmt.Printf("flag.Args() %v \n", argslice)
+	root := argslice[0]
 	basedirs, direrr := ioutil.ReadDir(root)
-	argslice := flag.Args() 
  
 	if(direrr != nil) {
 		fmt.Printf("ReadDir err %v \n", direrr)
@@ -92,12 +116,12 @@ func main() {
 
 	shallowfind := append(append([]string{},[]string{"-maxdepth", "1"}... ), argslice[1:]... )
 	wg.Add(1)
-	go find(root, &wg, shallowfind, msg_channel) 
+	go find(root, &wg, set_flags, shallowfind, msg_channel) 
 
 	for  dir := range basedirs {
 		if basedirs[dir].IsDir() {
 			wg.Add(1)
-			go find(filepath.Join(root, basedirs[dir].Name()), &wg, argslice[1:], msg_channel)
+			go find(filepath.Join(root, basedirs[dir].Name()), &wg, set_flags, argslice[1:], msg_channel)
 		}
 	}
 
