@@ -77,7 +77,7 @@ func aggregator(wg *sync.WaitGroup, input chan output_msg) {
 
 func parseflags() []string {
 
-	osx_find_flags := []string{"L", "H", "P", "E", "X", "d", "s", "x"}
+	osx_find_flags := []string{"L", "H", "P", "E", "X", "d", "s", "x", "f"}
 	set_flags := []string{}
 
 	for f := range osx_find_flags {
