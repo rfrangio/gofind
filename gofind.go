@@ -3,7 +3,7 @@ package main
 
 import (
 	"path/filepath"
-//	"os"
+	"os"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -25,22 +25,29 @@ type output_msg struct {
 	buffer	bytes.Buffer
 }
 
-func find(root string, wg *sync.WaitGroup, exp []string, output chan output_msg) error {
+func find(root string, wg *sync.WaitGroup, exp []string, output chan output_msg) {
 
 	defer wg.Done()
-	var cmd_out bytes.Buffer
+	var cmd_out, cmd_err bytes.Buffer
 	var msg output_msg 
 
 	findargs := append([]string{root}, exp... )
 	cmd := exec.Command("find", findargs... )
 	cmd.Stdout = &cmd_out
+	cmd.Stderr = &cmd_err
 	err := cmd.Run()
 
-	msg.mtype = OUTPUT
-	msg.buffer = cmd_out
-	output <- msg
+	if err == nil {
+		msg.mtype = OUTPUT
+		msg.buffer = cmd_out
+		output <- msg
+	} else {
+		msg.mtype = ERROR
+		msg.buffer = cmd_err
+		output <- msg
+	}
 
-	return err
+	return
 }
 
 func aggregate(wg *sync.WaitGroup, input chan output_msg) {
@@ -58,6 +65,9 @@ func aggregate(wg *sync.WaitGroup, input chan output_msg) {
 				fmt.Printf("%s", msg.buffer.String())
 			}	
 		case ERROR:
+			if msg.buffer.Len() > 0 {
+				fmt.Fprintf(os.Stderr, "%s", msg.buffer.String())
+			}
 		default:
 		}
 	}
@@ -72,7 +82,6 @@ func main() {
 	flag.Parse()
 	root := flag.Arg(0)
 	basedirs, direrr := ioutil.ReadDir(root)
-
 	argslice := flag.Args() 
  
 	if(direrr != nil) {
@@ -94,8 +103,8 @@ func main() {
 
 	wga.Add(1)
 	go aggregate(&wga, msg_channel)
-
 	wg.Wait()
+
 	msg_channel <- output_msg{CLOSE, bytes.Buffer{}}
 	wga.Wait()
 }
