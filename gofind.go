@@ -50,7 +50,7 @@ func find(root string, wg *sync.WaitGroup, exp []string, output chan output_msg)
 	return
 }
 
-func aggregate(wg *sync.WaitGroup, input chan output_msg) {
+func aggregator(wg *sync.WaitGroup, input chan output_msg) {
 
 	defer wg.Done()
 	var msg output_msg
@@ -102,7 +102,7 @@ func main() {
 	}
 
 	wga.Add(1)
-	go aggregate(&wga, msg_channel)
+	go aggregator(&wga, msg_channel)
 	wg.Wait()
 
 	msg_channel <- output_msg{CLOSE, bytes.Buffer{}}
