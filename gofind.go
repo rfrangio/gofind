@@ -104,7 +104,6 @@ func main() {
 	set_flags := parseflags()
 
 	argslice := flag.Args()
-	fmt.Printf("flag.Args() %v \n", argslice)
 	root := argslice[0]
 	basedirs, direrr := ioutil.ReadDir(root)
  
