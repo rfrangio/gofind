@@ -111,8 +111,15 @@ func parseargs(args []string) ([]string, []string) {
 	return rootdirs, options
 }
 
+//var Usage = 
+func gofind_usage() {
+        fmt.Fprintf(os.Stderr, "Usage: gofind [find-flags] rootsearchdir[...] [find-options]\n(osx only find-flags atm)\n")
+        //flag.PrintDefaults()
+}
+
 func main() {
 
+	flag.Usage = gofind_usage
 	var wg, wga sync.WaitGroup
 	msg_channel := make(chan output_msg)
 
@@ -124,7 +131,8 @@ func main() {
 	for r := range rootdirs {
 		dirs, direrr := ioutil.ReadDir(rootdirs[r])
 		if(direrr != nil) {
-			fmt.Printf("Usage: gofind [find-flags] rootsearchdir[...] [find-options] \n")
+			gofind_usage()
+			//	fmt.Printf("Usage: gofind [find-flags] rootsearchdir[...] [find-options] \n")
 			return
 		}
 		for dirindex := range dirs {
