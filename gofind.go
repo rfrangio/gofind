@@ -97,18 +97,17 @@ func parseflags() []string {
 	return set_flags
 }
 
-func getrootdirs(args []string) ([]string, []string) {
+func parseargs(args []string) ([]string, []string) {
 
-	rootdirs := []string{}
-	options := []string{}
 	var i int
 
 	for i = range args {
 		if strings.HasPrefix(args[i], "-")  { break }
-		rootdirs = append(rootdirs, args[i])
 		i++
 	}
-	options = append(options, args[i:]... ) 
+
+	rootdirs := append([]string{}, args[:i]... )
+	options := append([]string{}, args[i:]... )
 	return rootdirs, options
 }
 
@@ -118,10 +117,10 @@ func main() {
 	msg_channel := make(chan output_msg)
 
 	set_flags := parseflags()
-
 	argslice := flag.Args()
 	basedirs := []string{}
-	rootdirs, options := getrootdirs(argslice)
+	rootdirs, options := parseargs(argslice)
+
 	for r := range rootdirs {
 		dirs, direrr := ioutil.ReadDir(rootdirs[r])
 		if(direrr != nil) {
