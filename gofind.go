@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"bytes"
 	"strconv"
+	"strings"
 )
 
 type msg_type int
@@ -96,6 +97,21 @@ func parseflags() []string {
 	return set_flags
 }
 
+func getrootdirs(args []string) ([]string, []string) {
+
+	rootdirs := []string{}
+	options := []string{}
+	var i int
+
+	for i = range args {
+		if strings.HasPrefix(args[i], "-")  { break }
+		rootdirs = append(rootdirs, args[i])
+		i++
+	}
+	options = append(options, args[i:]... ) 
+	return rootdirs, options
+}
+
 func main() {
 
 	var wg, wga sync.WaitGroup
@@ -104,24 +120,28 @@ func main() {
 	set_flags := parseflags()
 
 	argslice := flag.Args()
-	root := argslice[0]
-	basedirs, direrr := ioutil.ReadDir(root)
- 
-	if(direrr != nil) {
-		fmt.Printf("ReadDir err %v \n", direrr)
-		fmt.Printf("Usage: gofind rootsearchdir <other-find-args> \n")
-		return
+	basedirs := []string{}
+	rootdirs, options := getrootdirs(argslice)
+	for r := range rootdirs {
+		dirs, direrr := ioutil.ReadDir(rootdirs[r])
+		if(direrr != nil) {
+			fmt.Printf("ReadDir err %v \n", direrr)
+			fmt.Printf("Usage: gofind rootsearchdir <other-find-args> \n")
+			return
+		}
+		for dirindex := range dirs {
+			if dirs[dirindex].IsDir() {
+				basedirs = append(basedirs, filepath.Join(rootdirs[r], dirs[dirindex].Name()))
+			}
+		}
+		shallowfind := append(append([]string{},[]string{"-maxdepth", "1"}... ), options... )
+		wg.Add(1)
+		go find(rootdirs[r], &wg, set_flags, shallowfind, msg_channel) 
 	}
 
-	shallowfind := append(append([]string{},[]string{"-maxdepth", "1"}... ), argslice[1:]... )
-	wg.Add(1)
-	go find(root, &wg, set_flags, shallowfind, msg_channel) 
-
 	for  dir := range basedirs {
-		if basedirs[dir].IsDir() {
-			wg.Add(1)
-			go find(filepath.Join(root, basedirs[dir].Name()), &wg, set_flags, argslice[1:], msg_channel)
-		}
+		wg.Add(1)
+		go find(basedirs[dir], &wg, set_flags, options, msg_channel)
 	}
 
 	wga.Add(1)
