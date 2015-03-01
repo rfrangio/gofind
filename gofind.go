@@ -12,6 +12,7 @@ import (
 	"bytes"
 	"strconv"
 	"strings"
+	"runtime"
 )
 
 type msg_type int
@@ -76,18 +77,43 @@ func aggregator(wg *sync.WaitGroup, input chan output_msg) {
 
 }
 
+func getosfindflags() []string {
+	var flags []string
+
+	switch runtime.GOOS {
+	case "freebsd":
+	case "darwin":
+		// osx find derived from freebsd and using same flags
+		flags = []string{"L", "H", "P", "E", "X", "d", "s", "x", "f"}
+	case "linux":
+		flags = []string{"L", "H", "P", "D", "O"}
+	case "windows":
+		// assuming gnu find for windows
+		flags = []string{"L", "H", "P", "D", "O"}
+	case "netbsd":
+		flags = []string{"L", "H", "P", "E", "X", "d", "s", "x", "f", "h"}
+	case "openbsd":
+		flags = []string{"d","H", "h", "L", "X", "x"}
+	default:
+		// assume freebsd variant
+		flags = []string{"L", "H", "P", "E", "X", "d", "s", "x", "f"}
+	}
+
+	return flags
+}
+
 func parseflags() []string {
 
-	osx_find_flags := []string{"L", "H", "P", "E", "X", "d", "s", "x", "f"}
+	os_find_flags := getosfindflags() 
 	set_flags := []string{}
 
-	for f := range osx_find_flags {
-		flag.Bool(osx_find_flags[f], false, "bool")
+	for f := range os_find_flags {
+		flag.Bool(os_find_flags[f], false, "bool")
 	}
 
 	flag.Parse()
-	for f := range osx_find_flags {
-		flag_p := flag.Lookup(osx_find_flags[f])
+	for f := range os_find_flags {
+		flag_p := flag.Lookup(os_find_flags[f])
 		val, err := strconv.ParseBool(flag_p.Value.String())
 		if err == nil && val == true {
 			set_flags = append(set_flags, "-"+flag_p.Name)
@@ -112,7 +138,7 @@ func parseargs(args []string) ([]string, []string) {
 }
 
 func gofind_usage() {
-        fmt.Fprintf(os.Stderr, "Usage: gofind [find-flags] rootsearchdir[...] [find-options]\n(osx only find-flags atm)\n")
+        fmt.Fprintf(os.Stderr, "Usage: gofind [find-flags] rootsearchdir[...] [find-options]\n(O & D find-flags for gnu find not supported atm)\n")
 }
 
 func main() {
@@ -130,7 +156,6 @@ func main() {
 		dirs, direrr := ioutil.ReadDir(rootdirs[r])
 		if(direrr != nil) {
 			gofind_usage()
-			//	fmt.Printf("Usage: gofind [find-flags] rootsearchdir[...] [find-options] \n")
 			return
 		}
 		for dirindex := range dirs {
