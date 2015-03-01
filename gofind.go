@@ -81,8 +81,7 @@ func getosfindflags() []string {
 	var flags []string
 
 	switch runtime.GOOS {
-	case "freebsd":
-	case "darwin":
+	case "darwin", "freebsd":
 		// osx find derived from freebsd and using same flags
 		flags = []string{"L", "H", "P", "E", "X", "d", "s", "x", "f"}
 	case "linux":
@@ -145,7 +144,7 @@ func main() {
 
 	flag.Usage = gofind_usage
 	var wg, wga sync.WaitGroup
-	msg_channel := make(chan output_msg)
+	msg_channel := make(chan output_msg, 1000)
 
 	set_flags := parseflags()
 	argslice := flag.Args()
