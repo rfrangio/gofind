@@ -144,7 +144,7 @@ func main() {
 
 	flag.Usage = gofind_usage
 	var wg, wga sync.WaitGroup
-	msg_channel := make(chan output_msg, 1000)
+	msg_channel := make(chan output_msg)
 
 	set_flags := parseflags()
 	argslice := flag.Args()
