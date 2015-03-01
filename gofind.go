@@ -111,10 +111,8 @@ func parseargs(args []string) ([]string, []string) {
 	return rootdirs, options
 }
 
-//var Usage = 
 func gofind_usage() {
         fmt.Fprintf(os.Stderr, "Usage: gofind [find-flags] rootsearchdir[...] [find-options]\n(osx only find-flags atm)\n")
-        //flag.PrintDefaults()
 }
 
 func main() {
