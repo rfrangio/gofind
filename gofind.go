@@ -124,8 +124,7 @@ func main() {
 	for r := range rootdirs {
 		dirs, direrr := ioutil.ReadDir(rootdirs[r])
 		if(direrr != nil) {
-			fmt.Printf("ReadDir err %v \n", direrr)
-			fmt.Printf("Usage: gofind rootsearchdir <other-find-args> \n")
+			fmt.Printf("Usage: gofind [find-flags] rootsearchdir[...] [find-options] \n")
 			return
 		}
 		for dirindex := range dirs {
