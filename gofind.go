@@ -145,6 +145,7 @@ func main() {
 	flag.Usage = gofind_usage
 	var wg, wga sync.WaitGroup
 	msg_channel := make(chan output_msg)
+	excludelist := []string{}
 
 	set_flags := parseflags()
 	argslice := flag.Args()
@@ -160,9 +161,14 @@ func main() {
 		for dirindex := range dirs {
 			if dirs[dirindex].IsDir() {
 				basedirs = append(basedirs, filepath.Join(rootdirs[r], dirs[dirindex].Name()))
+				if dirindex == 0 {
+					excludelist = append([]string{"-not", "-name"}, dirs[dirindex].Name())
+				} else {
+					excludelist = append(append(excludelist, []string{"-and", "-not", "-name"}... ), dirs[dirindex].Name())
+				}
 			}
 		}
-		shallowfind := append(append([]string{},[]string{"-maxdepth", "1"}... ), options... )
+		shallowfind := append(append([]string{"-maxdepth", "1"}, excludelist... ), options... )
 		wg.Add(1)
 		go find(rootdirs[r], &wg, set_flags, shallowfind, msg_channel) 
 	}
