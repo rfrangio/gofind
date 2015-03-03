@@ -1,18 +1,19 @@
 package main
+
 // Author: Robert B Frangioso
 
 import (
-	"path/filepath"
-	"os"
+	"bytes"
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"sync"
+	"os"
 	"os/exec"
-	"bytes"
+	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
-	"runtime"
+	"sync"
 )
 
 type msg_type int
@@ -21,21 +22,21 @@ const (
 	OUTPUT msg_type = 1 + iota
 	ERROR
 	CLOSE
-) 
+)
 
 type output_msg struct {
-	mtype	msg_type
-	buffer	bytes.Buffer
+	mtype  msg_type
+	buffer bytes.Buffer
 }
 
 func find(root string, wg *sync.WaitGroup, flags []string, args []string, output chan output_msg) {
 
 	defer wg.Done()
 	var cmd_out, cmd_err bytes.Buffer
-	var msg output_msg 
+	var msg output_msg
 
-	findstr := append(append(append([]string{}, flags... ), []string{root}... ), args... )
-	cmd := exec.Command("find", findstr... )
+	findstr := append(append(append([]string{}, flags...), []string{root}...), args...)
+	cmd := exec.Command(findname, findstr...)
 	cmd.Stdout = &cmd_out
 	cmd.Stderr = &cmd_err
 	err := cmd.Run()
@@ -59,14 +60,14 @@ func aggregator(wg *sync.WaitGroup, input chan output_msg) {
 	var msg output_msg
 
 	for true {
-		msg = <- input
+		msg = <-input
 		switch msg.mtype {
 		case CLOSE:
 			return
 		case OUTPUT:
 			if msg.buffer.Len() > 0 {
 				fmt.Printf("%s", msg.buffer.String())
-			}	
+			}
 		case ERROR:
 			if msg.buffer.Len() > 0 {
 				fmt.Fprintf(os.Stderr, "%s", msg.buffer.String())
@@ -77,14 +78,18 @@ func aggregator(wg *sync.WaitGroup, input chan output_msg) {
 
 }
 
+var findname string = "find"
+var isplan9 bool = false
+
 func getosfindflags() []string {
 	var flags []string
 
 	switch runtime.GOOS {
-	case "darwin", "freebsd":
+	case "darwin", "freebsd", "dragonfly":
 		// osx find derived from freebsd and using same flags
 		flags = []string{"L", "H", "P", "E", "X", "d", "s", "x", "f"}
 	case "linux":
+		// gnu find
 		flags = []string{"L", "H", "P", "D", "O"}
 	case "windows":
 		// assuming gnu find for windows
@@ -92,7 +97,11 @@ func getosfindflags() []string {
 	case "netbsd":
 		flags = []string{"L", "H", "P", "E", "X", "d", "s", "x", "f", "h"}
 	case "openbsd":
-		flags = []string{"d","H", "h", "L", "X", "x"}
+		flags = []string{"d", "H", "h", "L", "X", "x"}
+	case "plan9":
+		flags = []string{"a", "e", "f", "h", "n", "q", "s", "t", "u", "b", "p"}
+		isplan9 = true
+		findname = "du"
 	default:
 		// assume freebsd variant
 		flags = []string{"L", "H", "P", "E", "X", "d", "s", "x", "f"}
@@ -103,7 +112,7 @@ func getosfindflags() []string {
 
 func parseflags() []string {
 
-	os_find_flags := getosfindflags() 
+	os_find_flags := getosfindflags()
 	set_flags := []string{}
 
 	for f := range os_find_flags {
@@ -127,17 +136,19 @@ func parseargs(args []string) ([]string, []string) {
 	var i int
 
 	for i = range args {
-		if strings.HasPrefix(args[i], "-")  { break }
+		if strings.HasPrefix(args[i], "-") {
+			break
+		}
 		i++
 	}
 
-	rootdirs := append([]string{}, args[:i]... )
-	options := append([]string{}, args[i:]... )
+	rootdirs := append([]string{}, args[:i]...)
+	options := append([]string{}, args[i:]...)
 	return rootdirs, options
 }
 
 func gofind_usage() {
-        fmt.Fprintf(os.Stderr, "Usage: gofind [find-flags] rootsearchdir[...] [find-options]\n(O & D find-flags for gnu find not supported atm)\n")
+	fmt.Fprintf(os.Stderr, "Usage: gofind [find-flags] rootsearchdir[...] [find-options]\n(O & D find-flags for gnu find not supported atm)\n")
 }
 
 func main() {
@@ -154,7 +165,7 @@ func main() {
 
 	for r := range rootdirs {
 		dirs, direrr := ioutil.ReadDir(rootdirs[r])
-		if(direrr != nil) {
+		if direrr != nil {
 			gofind_usage()
 			return
 		}
@@ -164,16 +175,18 @@ func main() {
 				if dirindex == 0 {
 					excludelist = append([]string{"-not", "-name"}, dirs[dirindex].Name())
 				} else {
-					excludelist = append(append(excludelist, []string{"-and", "-not", "-name"}... ), dirs[dirindex].Name())
+					excludelist = append(append(excludelist, []string{"-and", "-not", "-name"}...), dirs[dirindex].Name())
 				}
 			}
 		}
-		shallowfind := append(append([]string{"-maxdepth", "1"}, excludelist... ), options... )
-		wg.Add(1)
-		go find(rootdirs[r], &wg, set_flags, shallowfind, msg_channel) 
+		if !isplan9 {
+			shallowfind := append(append([]string{"-maxdepth", "1"}, excludelist...), options...)
+			wg.Add(1)
+			go find(rootdirs[r], &wg, set_flags, shallowfind, msg_channel)
+		}
 	}
 
-	for  dir := range basedirs {
+	for dir := range basedirs {
 		wg.Add(1)
 		go find(basedirs[dir], &wg, set_flags, options, msg_channel)
 	}
@@ -185,4 +198,3 @@ func main() {
 	msg_channel <- output_msg{CLOSE, bytes.Buffer{}}
 	wga.Wait()
 }
-
