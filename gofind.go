@@ -78,79 +78,6 @@ func aggregator(wg *sync.WaitGroup, input chan output_msg) {
 
 }
 
-var findname string = "find"
-var isplan9 bool = false
-
-func getosfindflags() []string {
-	var flags []string
-
-	switch runtime.GOOS {
-	case "darwin", "freebsd", "dragonfly":
-		// osx find derived from freebsd and using same flags
-		flags = []string{"L", "H", "P", "E", "X", "d", "s", "x", "f"}
-	case "linux":
-		// gnu find
-		flags = []string{"L", "H", "P", "D", "O"}
-	case "windows":
-		// assuming gnu find for windows
-		flags = []string{"L", "H", "P", "D", "O"}
-	case "netbsd":
-		flags = []string{"L", "H", "P", "E", "X", "d", "s", "x", "f", "h"}
-	case "openbsd":
-		flags = []string{"d", "H", "h", "L", "X", "x"}
-	case "plan9":
-		flags = []string{"a", "e", "f", "h", "n", "q", "s", "t", "u", "b", "p"}
-		isplan9 = true
-		findname = "du"
-	default:
-		// assume freebsd variant
-		flags = []string{"L", "H", "P", "E", "X", "d", "s", "x", "f"}
-	}
-
-	return flags
-}
-
-func parseflags() []string {
-
-	os_find_flags := getosfindflags()
-	set_flags := []string{}
-
-	for f := range os_find_flags {
-		flag.Bool(os_find_flags[f], false, "bool")
-	}
-
-	flag.Parse()
-	for f := range os_find_flags {
-		flag_p := flag.Lookup(os_find_flags[f])
-		val, err := strconv.ParseBool(flag_p.Value.String())
-		if err == nil && val == true {
-			set_flags = append(set_flags, "-"+flag_p.Name)
-		}
-	}
-
-	return set_flags
-}
-
-func parseargs(args []string) ([]string, []string) {
-
-	var i int
-
-	for i = range args {
-		if strings.HasPrefix(args[i], "-") {
-			break
-		}
-		i++
-	}
-
-	rootdirs := append([]string{}, args[:i]...)
-	options := append([]string{}, args[i:]...)
-	return rootdirs, options
-}
-
-func gofind_usage() {
-	fmt.Fprintf(os.Stderr, "Usage: gofind [find-flags] rootsearchdir[...] [find-options]\n(O & D find-flags for gnu find not supported atm)\n")
-}
-
 func main() {
 
 	flag.Usage = gofind_usage
@@ -197,4 +124,77 @@ func main() {
 
 	msg_channel <- output_msg{CLOSE, bytes.Buffer{}}
 	wga.Wait()
+}
+
+var findname string = "find"
+var isplan9 bool = false
+
+func parseflags() []string {
+
+	os_find_flags := getosfindflags()
+	set_flags := []string{}
+
+	for f := range os_find_flags {
+		flag.Bool(os_find_flags[f], false, "bool")
+	}
+
+	flag.Parse()
+	for f := range os_find_flags {
+		flag_p := flag.Lookup(os_find_flags[f])
+		val, err := strconv.ParseBool(flag_p.Value.String())
+		if err == nil && val == true {
+			set_flags = append(set_flags, "-"+flag_p.Name)
+		}
+	}
+
+	return set_flags
+}
+
+func parseargs(args []string) ([]string, []string) {
+
+	var i int
+
+	for i = range args {
+		if strings.HasPrefix(args[i], "-") {
+			break
+		}
+		i++
+	}
+
+	rootdirs := append([]string{}, args[:i]...)
+	options := append([]string{}, args[i:]...)
+	return rootdirs, options
+}
+
+func gofind_usage() {
+	fmt.Fprintf(os.Stderr, "Usage: gofind [find-flags] rootsearchdir[...] [find-options]\n(O & D find-flags for gnu find not supported atm)\n")
+}
+
+func getosfindflags() []string {
+	var flags []string
+
+	switch runtime.GOOS {
+	case "darwin", "freebsd", "dragonfly":
+		// osx find derived from freebsd and using same flags
+		flags = []string{"L", "H", "P", "E", "X", "d", "s", "x", "f"}
+	case "linux":
+		// gnu find
+		flags = []string{"L", "H", "P", "D", "O"}
+	case "windows":
+		// assuming gnu find for windows
+		flags = []string{"L", "H", "P", "D", "O"}
+	case "netbsd":
+		flags = []string{"L", "H", "P", "E", "X", "d", "s", "x", "f", "h"}
+	case "openbsd":
+		flags = []string{"d", "H", "h", "L", "X", "x"}
+	case "plan9":
+		flags = []string{"a", "e", "f", "h", "n", "q", "s", "t", "u", "b", "p"}
+		isplan9 = true
+		findname = "du"
+	default:
+		// assume freebsd variant
+		flags = []string{"L", "H", "P", "E", "X", "d", "s", "x", "f"}
+	}
+
+	return flags
 }
