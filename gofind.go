@@ -100,9 +100,9 @@ func main() {
 			if dirs[dirindex].IsDir() {
 				basedirs = append(basedirs, filepath.Join(rootdirs[r], dirs[dirindex].Name()))
 				if dirindex == 0 {
-					excludelist = append([]string{"-not", "-name"}, dirs[dirindex].Name())
+					excludelist = append([]string{"!", "-name"}, dirs[dirindex].Name())
 				} else {
-					excludelist = append(append(excludelist, []string{"-and", "-not", "-name"}...), dirs[dirindex].Name())
+					excludelist = append(append(excludelist, []string{"-and", "!", "-name"}...), dirs[dirindex].Name())
 				}
 			}
 		}
