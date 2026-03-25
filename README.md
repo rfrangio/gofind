@@ -1,7 +1,21 @@
 # gofind
-go utility for speeding up large finds 
+go utility for speeding up large finds
 
-Semantics
+## Status
+
+The canonical implementation is the module-root program in
+[`gofind.go`](./gofind.go). Older experiments remain in the repository, but they
+now live under [`archive/`](./archive), so normal Go commands only target the
+current implementation.
+
+## Build And Test
+
+```bash
+go build .
+go test ./...
+```
+
+## Semantics
 
 Options such as -s and -d that imply a fixed global ordering of operations 
 are only valid within within the context of each individual find that is 
@@ -29,5 +43,3 @@ So for the sake of equivalence we will seek to have the following hold true.
 
 	gofind [-sd] | sort == find [-sd] | sort
    
-
-

@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -41,11 +40,13 @@ func find(root string, wg *sync.WaitGroup, flags []string, args []string, output
 	cmd.Stderr = &cmd_err
 	err := cmd.Run()
 
-	if err == nil {
+	if cmd_out.Len() > 0 {
 		msg.mtype = OUTPUT
 		msg.buffer = cmd_out
 		output <- msg
-	} else {
+	}
+
+	if err != nil && cmd_err.Len() > 0 {
 		msg.mtype = ERROR
 		msg.buffer = cmd_err
 		output <- msg
@@ -54,15 +55,17 @@ func find(root string, wg *sync.WaitGroup, flags []string, args []string, output
 	return
 }
 
-func aggregator(wg *sync.WaitGroup, input chan output_msg) {
+func aggregator(wg *sync.WaitGroup, input chan output_msg, status chan bool) {
 
 	defer wg.Done()
 	var msg output_msg
+	hadError := false
 
 	for true {
 		msg = <-input
 		switch msg.mtype {
 		case CLOSE:
+			status <- hadError
 			return
 		case OUTPUT:
 			if msg.buffer.Len() > 0 {
@@ -72,6 +75,7 @@ func aggregator(wg *sync.WaitGroup, input chan output_msg) {
 			if msg.buffer.Len() > 0 {
 				fmt.Fprintf(os.Stderr, "%s", msg.buffer.String())
 			}
+			hadError = true
 		default:
 		}
 	}
@@ -79,11 +83,10 @@ func aggregator(wg *sync.WaitGroup, input chan output_msg) {
 }
 
 func main() {
-
 	flag.Usage = gofind_usage
 	var wg, wga sync.WaitGroup
 	msg_channel := make(chan output_msg)
-	excludelist := []string{}
+	status_channel := make(chan bool, 1)
 
 	set_flags := parseflags()
 	argslice := flag.Args()
@@ -91,14 +94,16 @@ func main() {
 	rootdirs, options := parseargs(argslice)
 
 	for r := range rootdirs {
-		dirs, direrr := ioutil.ReadDir(rootdirs[r])
+		excludelist := []string{}
+		dirs, direrr := os.ReadDir(rootdirs[r])
 		if direrr != nil {
 			gofind_usage()
 			return
 		}
 		for dirindex := range dirs {
 			if dirs[dirindex].IsDir() {
-				basedirs = append(basedirs, filepath.Join(rootdirs[r], dirs[dirindex].Name()))
+				subdir := joinSearchRoot(rootdirs[r], dirs[dirindex].Name())
+				basedirs = append(basedirs, subdir)
 				if dirindex == 0 {
 					excludelist = append([]string{"!", "-name"}, dirs[dirindex].Name())
 				} else {
@@ -119,15 +124,34 @@ func main() {
 	}
 
 	wga.Add(1)
-	go aggregator(&wga, msg_channel)
+	go aggregator(&wga, msg_channel, status_channel)
 	wg.Wait()
 
 	msg_channel <- output_msg{CLOSE, bytes.Buffer{}}
 	wga.Wait()
+	if <-status_channel {
+		os.Exit(1)
+	}
 }
 
 var findname string = "find"
 var isplan9 bool = false
+
+func joinSearchRoot(root string, child string) string {
+	if filepath.IsAbs(root) {
+		return filepath.Join(root, child)
+	}
+
+	sep := string(os.PathSeparator)
+	switch {
+	case root == ".":
+		return "." + sep + child
+	case strings.HasPrefix(root, "."+sep):
+		return root + sep + child
+	default:
+		return filepath.Join(root, child)
+	}
+}
 
 func parseflags() []string {
 
